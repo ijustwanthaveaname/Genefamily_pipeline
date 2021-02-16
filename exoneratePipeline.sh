@@ -31,12 +31,12 @@ do
 	esac
 	shift
 done
-outname=`basename $genome`
-outdir=`dirname $genome`
-outprefix="`dirname $genome`/${outname%.fna}"
+outname=${genome:t}
+outdir=${genome:h}
+outprefix=${outdir}/${outname%.fna}
 
 # Step2 blast
-makeblastdb -dbtype nucl -in $genome -out $outprefix -parse_seqids
+makeblastdb -dbtype nucl -in $genome -out $outprefix 
 tblastn -db $outprefix -num_threads $threads -out ${outprefix}".blast" -outfmt 6 -evalue $evalue -query $homology
 
 # Step3 filter overlapping region
@@ -54,14 +54,14 @@ ls $outdir |
 	grep -E ".*fna_[0-9]+$" |
 	while read id
 	do
-		nohup exonerate -E -q $homology -t $id --model protein2genome:bestfit --querytype protein --targettype dna --showvulgar no --softmaskquery no --softmasktarget yes --showalignment no --showtargetgff yes --showcigar no --score 300 --bestn 0 --verbose 0 1> ${id%.fna*}.gff_${id##*_} 2> ${id%.fna*}.log_${id##*_} &
+		nohup exonerate -E -q $homology -t $id --model protein2genome:bestfit --querytype protein --targettype dna --showvulgar no --softmaskquery no --softmasktarget yes --showalignment no --showtargetgff yes --showcigar no --score 1000 --bestn 0 --verbose 0 1> ${id%.fna*}.gff_${id##*_} 2> ${id%.fna*}.log_${id##*_} &
 	done
 wait
 ls ${outdir}/*.gff_* | gawk -f $GENEFPATH/main/gff_sorter.awk | while read id 
 do
-	 cat $outdir/$id >> $outprefix".gff"
+	 cat $outdir/$id >> $outprefix"_predicted.gff"
 done
-gawk -f $GENEFPATH/main/fix_gff.awk $outprefix".gff" | tr -s "     " > $outprefix"_fix.gff"  
+gawk -f $GENEFPATH/main/fix_gff.awk $outprefix"_predicted.gff" | tr -s "     " > $outprefix"_fix.gff"  
 gffread $outprefix"_fix.gff" -g $outprefix"_candidate.fna" -y $outprefix"_candidate.cds"
 # Step6.1 Extract id
 grep ">" $outprefix"_candidate.cds" | awk -F">" '{print $2}' > $outprefix"_candidate_id.txt"
