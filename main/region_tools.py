@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 from dataclasses import dataclass, replace
 from operator import attrgetter
+from itertools import chain
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 import getopt
 import sys
@@ -177,7 +178,7 @@ class RegionIO:
 
     def write(self, output_path):
         with open(output_path, "w") as o:
-            for rec in self.sort_rf+self.sort_rv:
+            for rec in chain(self.sort_rf, self.sort_rv):
                 o.write(f"{rec.q_id}\t{rec.s_id}"
                         f"\t{rec.identity}\t{rec.alignment_length}"
                         f"\t{rec.mismatches}\t{rec.gap_openings}"
