@@ -6,9 +6,9 @@
 
 # Get gffdir from input
 usage() {
-	echo "zsh /pathToscript/mergegff.sh -d <DirIncludeGFFs>"
+	echo "Usage:\tzsh /pathToscript/mergegff.sh -d <DirIncludeGFFs>"
 }
-while {getopts d: arg} {
+while {getopts d:h arg} {
 	case $arg {
 		(d)
 		gffdir=$OPTARG
@@ -23,6 +23,7 @@ while {getopts d: arg} {
 		;;
 		(?)
 		echo "Wrong option!"
+		usage
 		;;
 	}
 }
