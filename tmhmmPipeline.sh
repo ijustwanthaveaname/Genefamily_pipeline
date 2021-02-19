@@ -54,10 +54,11 @@ ls ${protein:h} |
 	grep -E "${protein}_[0-9]+$" | 
 	while read id
 	do
-		nohup tmhmm $id -short >tmhmm_result.txt_${id##*_} &
+		echo "Proccessing $id"
+		tmhmm $id -short >tmhmm_result.txt_${id##*_} & 
 	done
 wait
-cat ${protein:h}/tmhmm_result.txt_* > ${protein:h}/tmhmm_result.txt && rm -rf ${protein:h}/tmhmm_result.txt_*  ${protein}_<->
+cat ${protein:h}/tmhmm_result.txt_* > ${protein:h}/tmhmm_result.txt && rm -rf ${protein:h}/tmhmm_result.txt_*  ${protein}_<-> ${protein:h}/TMHMM_<->
 
 # Step3 Get PredHel>=trans id
 gawk -F"[\t=]" -v n=$trans '$9>=n{print $1}' ${protein:h}/tmhmm_result.txt > ${protein:h}/tmhmmGe${trans}_id.txt
