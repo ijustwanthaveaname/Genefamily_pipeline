@@ -3,9 +3,9 @@
 
 # Get options from command line
 usage() {
-	echo "Usage\n\tzsh /pathToScript/ -t <TargetGenome> -d <DirToSpecies> -o <OutMergedDir> -n <threads>"
+	echo "Usage\n\tzsh /pathToScript/ -t <TargetGenome> -q <DirToQuerySpecies> -o <OutMergedDir> -n <threads>"
 }
-while {getopts t:d:o:n:h arg} {
+while {getopts t:q:o:n:h arg} {
 	case $arg {
 		(h)
 		usage
@@ -19,18 +19,18 @@ while {getopts t:d:o:n:h arg} {
 			target=$OPTARG
 		}
 		;;
-		(d)
+		(q)
 		if [[ ! -d $OPTARG ]] {
 			echo "The directory you specified does not exist!"
 			exit
 		} else {
-			workdir=$OPTARG
+			query=$OPTARG
 		}
 		;;
 		(o)
 		if [[ ! -d $OPTARG ]] {
 			echo "The output directory does not exist and will be created."
-			mkdir $OPTARG
+			mkdir -p $OPTARG
 		}
 		outdir=$OPTARG
 		;;
@@ -47,33 +47,37 @@ while {getopts t:d:o:n:h arg} {
 
 # Start main pipeline 
 # Step.1 Get query regions and gff from reference genome and gff
-for sp (`ls $workdir`) {
-	if [[ -d $workdir/$sp ]] {
-		for file (`ls $workdir/$sp`) {
-			if [[ $file =~ ".*\.fna$" ]] {
-				refgenome=$workdir/$sp/$file
-			} elif [[ $file =~ ".*\.faa$" ]] {
-				queryprotein=$workdir/$sp/$file
-			} elif [[ $file =~ ".*\.gff$" ]] {
-				refgff=$workdir/$sp/$file
-			} else {
-				echo "The directory that you specified is not contain correct directories!"
-				exit
-			}
+ls $query | while read sp
+do
+	echo "Proccessing $sp ..."
+	if [[ -d $query/$sp ]] {
+		for file (`ls $query/$sp`) {
+			if [[ $file =~ ".*genomic\.fna$" ]] {
+				refgenome=$query/$sp/$file
+			} elif [[ $file =~ ".*query\.faa$" ]] {
+				queryprotein=$query/$sp/$file
+			} elif [[ $file =~ ".*genomic\.gff$" ]] {
+				refgff=$query/$sp/$file
+			} 
 		}
-		echo "Proccessing $sp ..."
-		python $GENEFPATH/main/parsegff.py -g $refgenome -h $queryprotein -a $refgff -b ${queryprotein%.faa}.gff -f ${queryprotein%.faa}GenomeRegion.fna && echo "Successfully get queryGFF and queryRegion."
+		if [[ -f $query/$sp/query.gff && -f $query/$sp/queryregion.fna ]] {
+			echo "The query.gff and queryregion.fna are existing."
+		} else {
+			python $GENEFPATH/main/parsegff.py -g $refgenome -h $queryprotein -a $refgff -b $query/$sp/query.gff -f $query/$sp/queryregion.fna && echo "Successfully get queryGFF and queryRegion."
+		}
 		wait 
 		echo "Start GeMoMa pipeline for $sp ..."
-		zsh $GENEFPATH/GeMoMaOneSpPipeline.sh tblastn $target ${queryprotein%.faa}.gff ${queryprotein%.faa}GenomeRegion.fna $threads $workdir/$sp && echo "Successfully get predicted region and protein of $sp."
+		zsh $GENEFPATH/GeMoMaOneSpPipeline.sh tblastn $target $query/$sp/query.gff $query/$sp/queryregion.fna $threads $query/$sp && echo "Successfully get predicted region and protein of $sp."
 	}
 	wait
-}
+done
 wait
 
 # Step.2 Merge gff and exclude overlap records in gff
 echo "Start merging gff files..."
-find $workdir -name final_annotation.gff | while read gff;do mv $gff $outdir/${${gff:h}:t}_${gff:t};done
+for rec (final_annotation.gff predicted_proteins.fasta protocol_GeMoMaPipeline.txt) {
+	find $query -name $rec | while read fp;do mv $fp $outdir/${${fp:h}:t}_${fp:t};done
+}
 zsh $GENEFPATH/main/mergegff.sh -d $outdir && echo "Successfully merge gff files!"
 
 # Step.3 Extract cds from target genome
