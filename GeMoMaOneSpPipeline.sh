@@ -18,13 +18,14 @@ ref_annotation=$3
 ref_genome=$4
 threads=$5
 out=$6
+evalue=$7
 
-if (($# != 6)) {
-	lib=$7
-	reads=$8
+if (($# != 7)) {
+	lib=$8
+	reads=$9
 	echo "GeMoMa using RNA-seq data: library type=" $lib "mapped reads=" $reads
-	time java -jar $jar CLI GeMoMaPipeline threads=$threads t=$target_genome s=own a=$ref_annotation g=$ref_genome tblastn=${tblastn} outdir=$out r=MAPPED ERE.s=$lib ERE.m=$reads ERE.c=true AnnotationFinalizer.r=NO
+	time java -jar $jar CLI GeMoMaPipeline threads=$threads t=$target_genome s=own a=$ref_annotation g=$ref_genome tblastn=${tblastn} outdir=$out r=MAPPED ERE.s=$lib ERE.m=$reads ERE.c=true AnnotationFinalizer.r=NO GAF.f="score/aa>=0" GeMoMa.e=$evalue
 } else { 
 	echo "GeMoMa without RNA-seq data"
-	time java -jar $jar CLI GeMoMaPipeline threads=$threads t=$target_genome s=own a=$ref_annotation g=$ref_genome tblastn=${tblastn} outdir=$out AnnotationFinalizer.r=NO
+	time java -jar $jar CLI GeMoMaPipeline threads=$threads t=$target_genome s=own a=$ref_annotation g=$ref_genome tblastn=${tblastn} outdir=$out AnnotationFinalizer.r=NO GAF.f="score/aa>=0" GeMoMa.e=$evalue
 }

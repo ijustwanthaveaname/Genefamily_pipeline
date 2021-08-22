@@ -49,5 +49,3 @@ if __name__ == "__main__":
         extract_fasta(name, fasta)
     except Exception as e:
         print(e)
-    else:
-        print("All done!")

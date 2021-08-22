@@ -3,9 +3,9 @@
 
 # Get options from command line
 usage() {
-	echo "Usage\n\tzsh /pathToScript/ -t <TargetGenome> -q <DirToQuerySpecies> -o <OutMergedDir> -n <threads>"
+	echo "Usage\n\tzsh /pathToScript/ -t <TargetGenome> -q <DirToQuerySpecies> -o <OutMergedDir> -n <threads> -e <evalue>"
 }
-while {getopts t:q:o:n:h arg} {
+while {getopts t:q:o:n:e:h arg} {
 	case $arg {
 		(h)
 		usage
@@ -25,6 +25,14 @@ while {getopts t:q:o:n:h arg} {
 			exit
 		} else {
 			query=$OPTARG
+		}
+		;;
+		(e)
+		if [[ ! -n $OPTARG ]] {
+			echo "Evalue not be set, default value is 100"
+			evalue=100
+		} else {
+			evalue=$OPTARG
 		}
 		;;
 		(o)
@@ -67,7 +75,7 @@ do
 		}
 		wait 
 		echo "Start GeMoMa pipeline for $sp ..."
-		zsh $GENEFPATH/GeMoMaOneSpPipeline.sh tblastn $target $query/$sp/query.gff $query/$sp/queryregion.fna $threads $query/$sp && echo "Successfully get predicted region and protein of $sp."
+		zsh $GENEFPATH/GeMoMaOneSpPipeline.sh tblastn $target $query/$sp/query.gff $query/$sp/queryregion.fna $threads $query/$sp $evalue && echo "Successfully get predicted region and protein of $sp."
 	}
 	wait
 done
@@ -79,7 +87,10 @@ for rec (final_annotation.gff predicted_proteins.fasta protocol_GeMoMaPipeline.t
 	find $query -name $rec | while read fp;do mv $fp $outdir/${${fp:h}:t}_${fp:t};done
 }
 zsh $GENEFPATH/main/mergegff.sh -d $outdir && echo "Successfully merge gff files!"
+python $GENEFPATH/main/excludeOverlapInSortedGff.py -g $outdir/merged.gff -o $outdir/filtermerged.gff
 
 # Step.3 Extract cds from target genome
 echo "Start extracting cds from target genome..."
-gffread $outdir/filtermerged.gff -g $target -y $outdir/predicted_cds.faa && echo "Successfully extract cds!\nAll done!" 
+gffread $outdir/filtermerged.gff -g $target -y $outdir/predicted_cds.faa && echo "Successfully extract cds(AA)!"
+gffread $outdir/filtermerged.gff -g $target -x $outdir/predicted_cds.fna && echo "Successfully extract cds(DNA)!"
+echo "All done!"
